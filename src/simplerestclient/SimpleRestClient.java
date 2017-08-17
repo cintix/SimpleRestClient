@@ -6,13 +6,15 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.HeadlessException;
 import java.awt.Image;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.LinkedHashMap;
@@ -28,6 +30,9 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+import org.fife.ui.rsyntaxtextarea.Theme;
 import org.w3c.tidy.Tidy;
 import simplerestclient.gui.HeaderTable;
 import simplerestclient.gui.JGrandientPanel;
@@ -40,7 +45,7 @@ import simplerestclient.net.HTTPRestClient;
  *
  * @author migo
  */
-public class SimpleRestClient implements ActionListener {
+public class SimpleRestClient implements ActionListener, KeyListener {
 
     private JWindowFrame frame = new JWindowFrame();
     private String[] httpActionNames = {"GET", "POST", "PUT", "DELETE"};
@@ -49,7 +54,7 @@ public class SimpleRestClient implements ActionListener {
     private JTable requestHeaders;
     private JTable responseHeaders;
     private JTextArea requestData;
-    private JTextArea responseData;
+    private RSyntaxTextArea responseData;
     private JButton sendBnt;
     private JTabbedPane detailsPanel;
 
@@ -65,7 +70,8 @@ public class SimpleRestClient implements ActionListener {
         urlField = new JTextField();
         urlField.setSize(600, 28);
         urlField.setLocation(110, 120);
-        urlField.setBorder(new TextBubbleBorder(Color.darkGray, 2, 4, 0));
+        urlField.setBorder(new TextBubbleBorder(new Color(102, 204, 255), 2, 4, 0));
+        urlField.addKeyListener(this);
         frame.addToAlignWith(urlField, JWindowFrame.KeepAlignBase.WIDTH);
 
         sendBnt = new JButton("Send");
@@ -114,9 +120,15 @@ public class SimpleRestClient implements ActionListener {
         scrollPaneForRequestData.setRowHeaderView(textLineNumberForRequest);
         detailsPanel.addTab("Request", new JPanel().add(scrollPaneForRequestData));
 
-        responseData = new JTextArea();
+        responseData = new RSyntaxTextArea();
+
+        try {
+            Theme.load(getClass().getResourceAsStream("eclipse.xml")).apply(responseData);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         responseData.setMargin(new Insets(5, 5, 5, 5));
-        responseData.setLineWrap(true);
+        //responseData.setLineWrap(true);
 
         JScrollPane scrollPaneForResponseData = new JScrollPane(responseData);
         TextLineNumber textLineNumberForResponseData = new TextLineNumber(responseData);
@@ -136,23 +148,25 @@ public class SimpleRestClient implements ActionListener {
         BoxLayout boxLayout = new BoxLayout(responsePanel, BoxLayout.Y_AXIS);
         responsePanel.setLayout(boxLayout);
 
-        Dimension sizeForscrollPaneForResponseData = scrollPaneForResponseData.getSize();
-        sizeForscrollPaneForResponseData.height = 160;
-        scrollPaneForResponseData.setMinimumSize(sizeForscrollPaneForResponseData);
-
-        Dimension sizeForscrollPaneForResponseHeaders = scrollPaneForResponseHeaders.getSize();
-        sizeForscrollPaneForResponseHeaders.height = 300;
-        sizeForscrollPaneForResponseHeaders.width = 9000;
-        scrollPaneForResponseHeaders.setMaximumSize(sizeForscrollPaneForResponseHeaders);
-
-        sizeForscrollPaneForResponseHeaders = scrollPaneForResponseHeaders.getSize();
-        sizeForscrollPaneForResponseHeaders.height = 150;
-        scrollPaneForResponseHeaders.setMinimumSize(sizeForscrollPaneForResponseData);
+//        Dimension sizeForscrollPaneForResponseData = scrollPaneForResponseData.getSize();
+//        sizeForscrollPaneForResponseData.height = 160;
+//        scrollPaneForResponseData.setMinimumSize(sizeForscrollPaneForResponseData);
+//
+//        Dimension sizeForscrollPaneForResponseHeaders = scrollPaneForResponseHeaders.getSize();
+//        sizeForscrollPaneForResponseHeaders.height = 300;
+//        sizeForscrollPaneForResponseHeaders.width = 9000;
+//        scrollPaneForResponseHeaders.setMaximumSize(sizeForscrollPaneForResponseHeaders);
+//
+//        sizeForscrollPaneForResponseHeaders = scrollPaneForResponseHeaders.getSize();
+//        sizeForscrollPaneForResponseHeaders.height = 150;
+//        scrollPaneForResponseHeaders.setMinimumSize(sizeForscrollPaneForResponseData);
 
         responsePanel.add(scrollPaneForResponseData);
-        responsePanel.add(scrollPaneForResponseHeaders);
+        
+        //responsePanel.add(scrollPaneForResponseHeaders);
+        
         detailsPanel.addTab("Response", responsePanel);
-
+        detailsPanel.addTab("Response Headers", new JPanel().add(scrollPaneForResponseHeaders));
         frame.addToAlignWith(detailsPanel, JWindowFrame.KeepAlignBase.BOTH);
         frame.setVisible(true);
     }
@@ -229,6 +243,10 @@ public class SimpleRestClient implements ActionListener {
 
     @Override
     public void actionPerformed(ActionEvent e) {
+        doRestCall();
+    }
+
+    private void doRestCall() {
         try {
             String url = urlField.getText();
             if (!url.toLowerCase().startsWith("http://")) {
@@ -261,11 +279,11 @@ public class SimpleRestClient implements ActionListener {
                 String actionData = client.action(method, url, postData);
 
                 responseModel.fillFromMap(client.getResponseHeadersMap());
-                String contentType = responseModel.getKey("content-type");
-
+                String contentType = responseModel.getKey("content-type");                
                 if (contentType != null) {
                     if (contentType.toLowerCase().contains("html")) {
                         String tmp = prettyFormat(actionData, false);
+                        responseData.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_HTML);
                         actionData = tmp;
                     }
 
@@ -276,6 +294,7 @@ public class SimpleRestClient implements ActionListener {
 //                            actionData = actionData.substring(end +2);
 //                        }
                         String tmp = prettyFormat(actionData, true);
+                        responseData.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_XML);
                         actionData = tmp;
                     }
 
@@ -284,6 +303,7 @@ public class SimpleRestClient implements ActionListener {
                         JsonObject json = parser.parse(actionData).getAsJsonObject();
                         Gson gson = new GsonBuilder().setPrettyPrinting().create();
                         actionData = gson.toJson(json);
+                        responseData.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JSON);
                     }
 
                 }
@@ -303,11 +323,27 @@ public class SimpleRestClient implements ActionListener {
 
     }
 
+    @Override
+    public void keyTyped(KeyEvent e) {
+    }
+
+    @Override
+    public void keyPressed(KeyEvent e) {
+
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e) {
+        if (e.getExtendedKeyCode() == KeyEvent.VK_ENTER) {
+            doRestCall();
+        }
+    }
+
     public static String prettyFormat(String input, boolean xml) {
         try {
             StringWriter stringWriter = new StringWriter();
-            System.out.println("in " + input);
             Tidy tidy = new Tidy();
+            tidy.setOutputEncoding("utf-8");
             tidy.setSmartIndent(true);
             tidy.setXHTML(false);
             tidy.setQuiet(true);
