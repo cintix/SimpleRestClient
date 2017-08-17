@@ -23,7 +23,7 @@ public class HeaderTable extends AbstractTableModel {
 
         UIDefaults defaults = UIManager.getLookAndFeelDefaults();
         if (defaults.get("Table.alternateRowColor") == null) {
-            defaults.put("Table.alternateRowColor", new Color(240, 240, 240));
+            defaults.put("Table.alternateRowColor", new Color(246, 246, 238));
         }
         this.keyValues = new LinkedHashMap();
 

@@ -86,6 +86,8 @@ public class SimpleRestClient implements ActionListener, KeyListener {
         frame.addComponent(requestParams);
 
         requestHeaders = new JTable(new HeaderTable());
+        requestHeaders.setRowHeight(requestHeaders.getRowHeight()+5);
+        requestHeaders.setRowMargin(5);        
         requestHeaders.setEnabled(true);
         JScrollPane scrollPaneForHeaders = new JScrollPane(requestHeaders);
         scrollPaneForHeaders.setSize(frame.getWidth() - 30, 66);
